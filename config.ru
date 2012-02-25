@@ -1,5 +1,29 @@
-# src: http://blog.ericwhite.ca/articles/2009/03/serving-static-content-with-ruby-thinrack/
-root=Dir.pwd
-puts ">>> Serving #{root}"
-run Rack::Directory.new("#{root}")
+require 'bundler/setup'
+require 'sinatra/base'
+require 'rack'
+require 'rack/rewrite'
 
+# The project root directory
+$root = ::File.dirname(__FILE__)
+
+use Rack::Deflater
+
+class SinatraStaticServer < Sinatra::Base  
+
+  get(/.+/) do
+    send_sinatra_file(request.path) {404}
+  end
+
+  not_found do
+    send_sinatra_file('404.html') {"Sorry, I cannot find #{request.path}"}
+  end
+
+  def send_sinatra_file(path, &missing_file_block)
+    file_path = File.join(File.dirname(__FILE__), 'public',  path)
+    file_path = File.join(file_path, 'index.html') unless file_path =~ /\.[a-z]+$/i  
+    File.exist?(file_path) ? send_file(file_path) : missing_file_block.call
+  end
+
+end
+
+run SinatraStaticServer
